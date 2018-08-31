@@ -3,12 +3,16 @@ class ModelWriterColumn:
     label = '<unnamed col>'
 
     @classmethod
+    def str_width(cls, s):
+        return sum([min(len(c.encode()), 2) for c in s])
+
+    @classmethod
     def justify(cls, s):
         """ 对齐字符串宽度，右侧补空格
         计算字符串的宽度，中文字符宽度为 2
         :return:
         """
-        width = sum([min(len(c.encode()), 2) for c in s])
+        width = cls.str_width(s)
         return s + ' ' * (cls.width - width)
 
     @classmethod
@@ -119,6 +123,27 @@ class ModelWriter:
     def get_table_name(self):
         return self.model._meta.db_table
 
+    def get_table_verbose_name(self):
+        return str(self.model._meta.verbose_name)
+
+    def is_model(self):
+        from django.db.models.base import ModelBase
+        return type(self.model) == ModelBase
+
+    def is_m2m(self):
+        from django.db.models.fields.related import ManyToManyField
+        return type(self.model) == ManyToManyField
+
+    # def get_title(self):
+    #     from django.db.models.base import ModelBase
+    #     from django.db.models.fields.related import ManyToManyField
+    #     if type(self.model) == ManyToManyField:
+    #         return self.get_table_name()
+    #     elif type(self.model) == ModelBase:
+    #         return '{} ({})'.format(self.get_table_name(), self.get_table_verbose_name())
+    #     else:
+    #         return '**未定义数据表**'
+
     def get_fields(self):
         return self.model._meta.get_fields()
 
@@ -126,8 +151,11 @@ class ModelWriter:
         sbuf.write('\n')
         sbuf.write(self.get_table_name())
         sbuf.write('\n')
-        sbuf.write('^'.ljust(len(self.get_table_name()), '^'))
+        sbuf.write(''.ljust(ModelWriterColumn.str_width(self.get_table_name()), '^'))
         sbuf.write('\n')
+        if self.is_model():
+            sbuf.write(str(self.get_table_verbose_name()))
+            sbuf.write('\n')
 
     def render_header(self, sbuf):
         sbuf.write('|' + ''.join(col.render_header() for col in self.columns))

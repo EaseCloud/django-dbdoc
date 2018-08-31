@@ -2,16 +2,27 @@ from sys import stdout
 
 from django.core.management.base import BaseCommand
 
+from django.conf import settings
+
 from ...dbdoc import ModelWriter
 
 
 class Command(BaseCommand):
+    def parse_model(self, module):
+        from importlib import import_module
+        if type(module) == str:
+            module = import_module(module)
+        return [m for m in module.__dict__.values() if hasattr(m, '_meta') and m._meta.model]
+
     def handle(self, *args, **options):
-        import core.models
         # 创建文件
         sbuf = stdout
         sbuf.write('.. _table:\n\n******\n表结构\n******\n')
-        models = [m for m in core.models.__dict__.values() if hasattr(m, '_meta') and m._meta.model]
+        # models = [m for m in settings.DBDOC_MODELS if hasattr(m, '_meta') and m._meta.model]
+
+        models = []
+        for module in settings.DBDOC_MODELS:
+            models += self.parse_model(module)
 
         model_results = dict()
         m2m_results = dict()
